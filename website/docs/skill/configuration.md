@@ -30,6 +30,7 @@ max_review_iterations: 2
 | Alan | Zorunlu | Varsayilan | Aciklama |
 |------|---------|------------|----------|
 | `task_source` | Hayir | `jira` | Task kaynagi turu |
+| `jira_tool` | Hayir | `auto` | Jira okuma yontemi: `auto`, `mcp`, `acli`, `api` |
 | `dqg_repo` | Hayir | GitHub URL | DQG clone adresi |
 | `dqg_path` | Hayir | OS'e gore | DQG kurulum dizini |
 | `context_path` | Hayir | `.context/` | Context dosyalari yolu |
@@ -74,6 +75,24 @@ Her task kaynagi icin ek kurulum gerekebilir:
 
 ### Jira
 
+Jira icin 3 yontem desteklenir. `jira_tool` config'i ile zorlayabilir veya `auto` ile otomatik secime birakabilirsiniz.
+
+**Yontem 1 — MCP (varsayilan):**
+MCP Jira server kuruluysa otomatik kullanilir.
+
+**Yontem 2 — Atlassian CLI (`acli`):**
+```bash
+# macOS
+brew install acli
+
+# Windows
+winget install Atlassian.CLI
+
+# Authenticate
+acli jira auth login --site "mysite.atlassian.net" --email "user@email.com" --token
+```
+
+**Yontem 3 — REST API:**
 `.env` dosyasina ekleyin:
 
 ```

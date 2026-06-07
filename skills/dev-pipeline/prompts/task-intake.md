@@ -27,23 +27,62 @@ else:
 
 **Detection:** Input matches `[A-Z]+-\d+` (e.g., `PDB-12345`, `AC-456`)
 
-**Reading steps:**
-1. Use `jira_jira_get_issue` MCP tool:
-   ```
-   jira_jira_get_issue(
-     issue_key: "{INPUT}",
-     fields: "description,reporter,assignee,priority,status,updated,labels,issuetype,summary,created,comment"
-   )
-   ```
-2. Read comments (if not included in first call):
-   ```
-   jira_jira_get_issue(
-     issue_key: "{INPUT}",
-     fields: "comment",
-     comment_limit: 20
-   )
-   ```
-3. Extract: title, description (parse ADF if needed), type, priority, labels, comments, reporter, assignee
+**Tool selection (priority order):**
+
+1. **MCP tool** (preferred): `jira_jira_get_issue` — use if MCP Jira server is available
+2. **Atlassian CLI (`acli`)**: `acli jira workitem view` — use if `acli` is installed
+3. **REST API**: direct HTTP call — fallback
+
+**Reading with MCP tool:**
+```
+jira_jira_get_issue(
+  issue_key: "{INPUT}",
+  fields: "description,reporter,assignee,priority,status,updated,labels,issuetype,summary,created,comment"
+)
+```
+
+**Reading with Atlassian CLI (`acli`):**
+```bash
+# Check if acli is available
+which acli 2>/dev/null || where acli 2>nul
+
+# View work item
+acli jira workitem view {INPUT} --json
+
+# View with specific fields
+acli jira workitem view {INPUT} --fields "*all" --json
+
+# View comments
+acli jira workitem comment-list {INPUT} --json
+```
+
+**Reading with REST API (fallback):**
+```bash
+curl -s -u "{email}:{api_token}" \
+  "https://{site}.atlassian.net/rest/api/3/issue/{INPUT}?fields=summary,description,comment,status,priority,issuetype,labels,assignee,reporter"
+```
+
+**Auto-detection logic:**
+```
+if jira_tool config == "mcp": use MCP tool
+elif jira_tool config == "acli": use acli
+elif jira_tool config == "api": use REST API
+elif jira_tool config == "auto" or not set:
+    if jira_jira_get_issue MCP tool is available: use MCP
+    elif acli is installed (which acli succeeds): use acli
+    else: use REST API with .env credentials
+```
+
+**Extract:** title, description (parse ADF if needed), type, priority, labels, comments, reporter, assignee
+
+**If authentication fails, ask user:**
+```
+Jira erisimi kurulamadi. Sunlardan birini yap:
+1. MCP Jira server kurulu mu? Kontrol et.
+2. acli kurulu mu? `acli jira auth login --site "mysite.atlassian.net" --email "user@email.com" --token` calistir
+3. .env dosyasinda DQG_JIRA_BASE_URL, DQG_JIRA_EMAIL, DQG_JIRA_API_TOKEN tanimli mi?
+4. Task'i manuel olarak aciklamana yaz, ben ondan devam edeyim
+```
 
 ### Azure DevOps
 

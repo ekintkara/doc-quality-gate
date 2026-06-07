@@ -38,6 +38,7 @@ Look for a `## Pipeline Config` section. If not found, use defaults and ask user
 ```markdown
 ## Pipeline Config
 task_source: jira                # jira | azure-devops | github | manual
+jira_tool: auto                  # auto | mcp | acli | api
 dqg_repo: https://github.com/ekintkara/doc-quailty-gate.git
 dqg_path: C:\repos\doc-quailty-gate
 # azure_devops_org: myorg
@@ -134,9 +135,9 @@ Follow `prompts/task-intake.md` instructions for source-specific reading.
 
 **Detection Rules:**
 
-| Input Pattern | Source | Tool |
+| Input Pattern | Source | Tool (priority order) |
 |---|---|---|
-| `[A-Z]+-\d+` (e.g. `PDB-12345`) | Jira | `jira_jira_get_issue` |
+| `[A-Z]+-\d+` (e.g. `PDB-12345`) | Jira | `jira_jira_get_issue` MCP → `acli jira workitem view` → REST API |
 | `AB#\d+` or `#\d+` (with azure config) | Azure DevOps | `az boards work-item show` via bash |
 | `owner/repo#\d+` | GitHub Issue | `gh issue view` via bash |
 | Path ending in `.md`, `.txt`, `.json` | File | `read` tool |

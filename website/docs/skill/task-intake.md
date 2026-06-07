@@ -1,4 +1,4 @@
-﻿---
+---
 sidebar_position: 4
 title: 'Faz 1-1.5: Task Intake ve Context'
 ---
@@ -11,9 +11,9 @@ Task'i kaynaktan okur ve analiz eder.
 
 Pipeline giris degerine gore task kaynagini otomatik tespit eder:
 
-| Input Pattern | Kaynak | Arac |
+| Input Pattern | Kaynak | Arac (oncelik sirasi) |
 |---------------|--------|------|
-| `[A-Z]+-\d+` (orn: `PDB-12345`) | Jira | `jira_jira_get_issue` |
+| `[A-Z]+-\d+` (orn: `PDB-12345`) | Jira | MCP tool → `acli` → REST API |
 | `AB#\d+` veya `#\d+` (Azure config varsa) | Azure DevOps | `az boards work-item show` |
 | `owner/repo#XXX` | GitHub Issues | `gh issue view` |
 | `.md`, `.txt`, `.json` ile biten yol | Dosya | `read` araci |
@@ -63,12 +63,29 @@ Yantla: "Onayliyorum" → implementasyon dokumanina gecerim
 
 ## Jira Entegrasyonu
 
-Jira task'lari icin otomatik olarak:
-- ADF (Atlassian Document Format) aciklamasi parse edilir
-- Yorumlar okunur (son 20 yorum)
-- Label'lar, assignee, priority bilgileri alinir
+Jira task'''lari icin 3 farkli yontem desteklenir (oncelik sirasina gore otomatik secilir):
 
-Detayli Jira kurulumu icin [DQG Jira Entegrasyonu](/dqg/jira-integration) dokumanuna bakin.
+| Oncelik | Yontem | Arac | Kosul |
+|---------|--------|------|-------|
+| 1 | MCP | `jira_jira_get_issue` | MCP Jira server kurulu |
+| 2 | Atlassian CLI | `acli jira workitem view` | `acli` kurulu ve authenticate |
+| 3 | REST API | `curl` | `.env` dosyasinda credentials |
+
+**Ayarla:** `AGENTS.md` icinde `jira_tool: auto|mcp|acli|api` ile belirli bir yontemi zorlayabilirsiniz.
+
+**Atlassian CLI (`acli`) ile kurulum:**
+```bash
+# macOS
+brew install acli
+
+# Windows
+winget install Atlassian.CLI
+
+# Authenticate
+acli jira auth login --site "mysite.atlassian.net" --email "user@email.com" --token
+```
+
+Detayli Jira kurulumu icin [DQG Jira Entegrasyonu](/dqg/jira-integration) dokumanina bakin.
 
 ## Azure DevOps Entegrasyonu
 

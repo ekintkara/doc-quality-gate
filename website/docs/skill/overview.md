@@ -1,4 +1,4 @@
-﻿---
+---
 slug: /
 sidebar_position: 1
 title: Genel Bakis
@@ -46,7 +46,7 @@ Her `[USER]` noktasinda AI durur ve sizin onayinizi bekler.
 
 | Kaynak | Pattern | Ornek |
 |--------|---------|-------|
-| Jira | `[A-Z]+-\d+` | `PDB-12345` |
+| Jira | `[A-Z]+-\d+` | `PDB-12345` | MCP → `acli` → REST API |
 | Azure DevOps | `AB#\d+` | `AB#456` |
 | GitHub Issues | `owner/repo#XXX` | `ekintkara/dqg#42` |
 | Dosya | `.md`, `.txt`, `.json` yolu | `docs/task.md` |
