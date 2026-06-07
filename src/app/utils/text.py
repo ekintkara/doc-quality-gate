@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, Optional
 
 
 def extract_json_array(text: str) -> list[dict]:
@@ -53,20 +53,82 @@ def _try_parse_json(text: str) -> Any:
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
+        candidate = text[start : end + 1]
         try:
-            return json.loads(text[start : end + 1])
+            return json.loads(candidate)
         except (json.JSONDecodeError, ValueError):
             pass
+        cleaned = _repair_json(candidate)
+        if cleaned is not None:
+            try:
+                return json.loads(cleaned)
+            except (json.JSONDecodeError, ValueError):
+                pass
 
     start = text.find("[")
     end = text.rfind("]")
     if start != -1 and end != -1 and end > start:
+        candidate = text[start : end + 1]
         try:
-            return json.loads(text[start : end + 1])
+            return json.loads(candidate)
         except (json.JSONDecodeError, ValueError):
             pass
+        cleaned = _repair_json(candidate)
+        if cleaned is not None:
+            try:
+                return json.loads(cleaned)
+            except (json.JSONDecodeError, ValueError):
+                pass
 
     return None
+
+
+def _repair_json(text: str) -> Optional[str]:
+    if not text:
+        return None
+    text = re.sub(r",(\s*[}\]])", r"\1", text)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]+", " ", text)
+    fixed = _fix_json_string_values(text)
+    if fixed is not None:
+        return fixed
+    text = re.sub(r"(?<!\\)'", '"', text)
+    text = re.sub(r'\\(?!["\\/bfnrtu])', "", text)
+    return text
+
+
+def _fix_json_string_values(text: str) -> Optional[str]:
+    result = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == '"':
+            j = i + 1
+            while j < len(text):
+                if text[j] == "\\" and j + 1 < len(text):
+                    j += 2
+                    continue
+                if text[j] == '"':
+                    raw = text[i + 1 : j]
+                    escaped = (
+                        raw.replace("\\", "\\\\")
+                        .replace('"', '\\"')
+                        .replace("\n", "\\n")
+                        .replace("\r", "\\r")
+                        .replace("\t", "\\t")
+                    )
+                    result.append('"')
+                    result.append(escaped)
+                    result.append('"')
+                    i = j + 1
+                    break
+                j += 1
+            else:
+                result.append(ch)
+                i += 1
+        else:
+            result.append(ch)
+            i += 1
+    return "".join(result)
 
 
 def normalize_severity(severity: str) -> str:

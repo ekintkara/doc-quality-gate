@@ -92,9 +92,14 @@ class PromptfooRunner:
                     stdout_len=len(result.stdout),
                     stderr_len=len(result.stderr),
                 )
-                if result.returncode != 0:
+                if result.returncode not in (0, 100):
                     raise PromptfooEvaluationError(
                         f"promptfoo exited with code {result.returncode}: {result.stderr[:500]}"
+                    )
+                if result.returncode == 100:
+                    logger.info(
+                        "promptfoo_partial_fail",
+                        note="Some assertions did not pass thresholds; results still parsed",
                     )
             except FileNotFoundError:
                 raise PromptfooEvaluationError("promptfoo not found. Install with: npm install -g promptfoo")
@@ -181,18 +186,32 @@ class PromptfooRunner:
         proxy_base_url: str,
         proxy_api_key: str,
     ) -> dict:
+        provider_config = {
+            "id": f"openai:{self.model_alias}",
+            "config": {
+                "basePath": proxy_base_url,
+                "apiKey": proxy_api_key,
+            },
+        }
         return {
             "description": "Doc Quality Gate Evaluation",
-            "providers": [
-                {
-                    "id": f"openai:{self.model_alias}",
-                    "config": {
-                        "basePath": proxy_base_url,
-                        "apiKey": proxy_api_key,
-                    },
-                }
-            ],
+            "providers": [provider_config],
             "prompts": [prompt_file],
+            "defaultTest": {
+                "options": {
+                    "provider": provider_config,
+                    "rubricPrompt": [
+                        {
+                            "role": "system",
+                            "content": "You are an expert evaluator. Return JSON with 'reason' (string), 'score' (0.0-1.0), and 'pass' (boolean).",
+                        },
+                        {
+                            "role": "user",
+                            "content": "Document:\n{{output}}\n\nRubric:\n{{rubric}}",
+                        },
+                    ],
+                }
+            },
             "tests": [
                 {
                     "description": "Document quality scoring",

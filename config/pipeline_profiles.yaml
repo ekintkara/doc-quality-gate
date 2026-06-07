@@ -1,0 +1,133 @@
+default_profile: standard
+
+profiles:
+  fast_track:
+    description: "Minor changes - skip heavy analysis"
+    stages:
+      - ingest
+      - validate
+      - revise
+      - score
+      - report
+    skip_stages:
+      - domain_context
+      - cross_reference
+      - deep_analysis
+      - critic_a_multi
+      - critic_b_multi
+      - critic_a_judge
+      - critic_b_judge
+      - dedupe
+      - meta_judge
+      - fact_check
+    early_exit: false
+    estimated_latency_seconds: 90
+    quality_confidence: 0.70
+
+  standard:
+    description: "Standard review - balanced"
+    stages:
+      - ingest
+      - domain_context
+      - cross_reference
+      - critic_a_multi
+      - critic_b_multi
+      - critic_a_judge
+      - critic_b_judge
+      - dedupe
+      - validate
+      - revise
+      - score
+      - report
+    skip_stages:
+      - deep_analysis
+      - meta_judge
+      - fact_check
+    early_exit: true
+    early_exit_stages:
+      - cross_reference
+    estimated_latency_seconds: 175
+    quality_confidence: 0.92
+
+  deep:
+    description: "Full 14-stage pipeline"
+    stages:
+      - ingest
+      - domain_context
+      - cross_reference
+      - deep_analysis
+      - critic_a_multi
+      - critic_b_multi
+      - critic_a_judge
+      - critic_b_judge
+      - dedupe
+      - validate
+      - revise
+      - score
+      - meta_judge
+      - fact_check
+      - report
+    skip_stages: []
+    early_exit: true
+    early_exit_stages:
+      - cross_reference
+      - deep_analysis
+    estimated_latency_seconds: 600
+    quality_confidence: 0.98
+
+parallel_groups:
+  fan_out_group_1:
+    stages:
+      - domain_context
+      - cross_reference
+      - critic_a_multi
+      - critic_b_multi
+    max_workers: 4
+    description: "Domain context, cross-reference and both critics run in parallel"
+
+  critic_judges:
+    stages:
+      - critic_a_judge
+      - critic_b_judge
+    max_workers: 2
+    description: "Both critic judges run in parallel"
+
+stage_durations:
+  ingest: 0.5
+  complexity_router: 5
+  domain_context: 30
+  cross_reference: 33
+  deep_analysis: 198
+  critic_a_multi: 42
+  critic_b_multi: 39
+  critic_a_judge: 31
+  critic_b_judge: 31
+  dedupe: 1
+  validate: 39
+  revise: 19
+  score: 31
+  meta_judge: 209
+  fact_check: 87
+  report: 2
+
+complexity_router:
+  thresholds:
+    minor_change: 3
+    standard: 6
+    major_change: 10
+  profile_mapping:
+    minor: fast_track
+    standard: standard
+    major: deep
+
+early_exit_rules:
+  cross_reference:
+    fatal_severities:
+      - critical
+    min_fatal_count: 1
+    abort_message: "Fatal cross-reference errors detected"
+  deep_analysis:
+    fatal_severities:
+      - critical
+    min_fatal_count: 2
+    abort_message: "Critical architectural violations detected"

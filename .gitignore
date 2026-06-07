@@ -14,3 +14,8 @@ build/
 node_modules/
 *.log
 .DS_Store
+
+# Docusaurus
+website/.docusaurus/
+website/build/
+website/node_modules/

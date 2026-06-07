@@ -107,6 +107,56 @@ def _scan_md_files(root: Path, max_files: int = 50, max_size_kb: int = 200) -> l
     return candidates
 
 
+def index_context_files(context_path: Path) -> list[dict]:
+    if not context_path.exists() or not context_path.is_dir():
+        return []
+    files = []
+    for md_file in sorted(context_path.glob("**/*.md")):
+        if any(skip in md_file.parts for skip in _SKIP_DIRS):
+            continue
+        try:
+            content = md_file.read_text(encoding="utf-8", errors="ignore")
+            rel_path = str(md_file.relative_to(context_path)).replace("\\", "/")
+            files.append({
+                "path": rel_path,
+                "filename": md_file.name,
+                "lines": content.count("\n") + 1,
+                "chars": len(content),
+                "preview": content[:500],
+            })
+        except Exception:
+            continue
+    return files
+
+
+def load_context_files(context_path: Path, selected_paths: list[str], max_chars: int = 50000) -> str:
+    if not context_path.exists() or not context_path.is_dir():
+        return ""
+    parts = [f"# Domain Context (from {context_path.name})\n"]
+    total_chars = 0
+    loaded: set[str] = set()
+    for rel_path in selected_paths:
+        md_file = context_path / rel_path
+        if not md_file.exists() or rel_path in loaded:
+            continue
+        try:
+            content = md_file.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        if total_chars + len(content) > max_chars:
+            remaining = max_chars - total_chars
+            if remaining > 200:
+                content = content[:remaining] + "\n[... truncated ...]"
+            else:
+                break
+        parts.append(f"## {rel_path}\n")
+        parts.append(content)
+        parts.append("\n---\n")
+        loaded.add(rel_path)
+        total_chars += len(content)
+    return "\n".join(parts) if len(parts) > 1 else ""
+
+
 def _load_structured_context(context_path: Path) -> str:
     if not context_path.exists() or not context_path.is_dir():
         return ""

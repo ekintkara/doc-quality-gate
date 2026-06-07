@@ -7,6 +7,7 @@ import httpx
 import structlog
 
 from app.config import AppConfig
+from app.utils.token_tracker import TokenTracker
 
 logger = structlog.get_logger("litellm_client")
 
@@ -16,11 +17,12 @@ _BASE_DELAY_SECONDS = 5.0
 
 
 class LiteLLMClient:
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: AppConfig, token_tracker: Optional["TokenTracker"] = None):
         self.base_url = config.proxy_base_url.rstrip("/")
         self.api_key = config.proxy_api_key
         self.timeout = config.proxy_timeout_seconds
         self.model_aliases = config.model_aliases
+        self.token_tracker = token_tracker
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -132,6 +134,14 @@ class LiteLLMClient:
             )
         except Exception:
             pass
+
+        if self.token_tracker:
+            self.token_tracker.record(
+                stage=stage or model,
+                model=model_used,
+                usage=usage,
+                duration_ms=elapsed_ms,
+            )
 
         return {
             "content": content,

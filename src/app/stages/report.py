@@ -7,6 +7,7 @@ from jinja2 import Template
 
 from app.config import ThresholdConfig
 from app.schemas import (
+    RealityVerdict,
     RunArtifacts,
     RunMetadata,
     Scorecard,
@@ -114,6 +115,33 @@ MARKDOWN_TEMPLATE = """\
 
 ---
 
+## Sorun Gerçeklik Değerlendirmesi (Fact Check)
+
+**Onaylanan:** {{ fact_check_confirmed }} |
+**Çürütülen:** {{ fact_check_refuted }} |
+**Belirsiz:** {{ fact_check_uncertain }}
+
+{% if fact_check_items %}
+### Detaylı Sonuçlar
+
+| ID | Durum | Gerçeklik Skoru | Düzeltme Önerisi |
+|----|-------|----------------|------------------|
+{% for item in fact_check_items %}
+| {{ item.issue_id }} | {{ item.verdict_label }} | {{ item.score_pct }} | {{ item.fix_summary }} |
+{% endfor %}
+{% endif %}
+
+{% if fact_check_confirmed_fixes %}
+### Onaylanan Sorunlar İçin Düzeltme Önerileri
+{% for item in fact_check_confirmed_fixes %}
+#### {{ item.issue_id }}
+- **Bölüm:** {{ item.section }}
+- **Açıklama:** {{ item.fix_description }}
+{% endfor %}
+{% endif %}
+
+---
+
 ## Model Yapılandırması
 
 | Aşama | Takma Ad | Kullanılan Model |
@@ -121,6 +149,22 @@ MARKDOWN_TEMPLATE = """\
 {% for stage, alias in metadata.model_aliases_used.items() %}
 | {{ stage }} | {{ alias }} | {{ metadata.actual_models_used.get(stage, "Yok") }} |
 {% endfor %}
+
+{% if token_by_model %}
+## Token Kullanımı
+
+**Toplam:** {{ token_total }} token
+({{ token_total_prompt }} prompt + {{ token_total_completion }} completion) |
+**Çağrı Sayısı:** {{ token_total_calls }}
+
+| Model | Prompt Token | Completion Token | Toplam Token | Çağrı | Süre (ms) |
+|-------|-------------|-----------------|-------------|-------|-----------|
+{% for model, data in token_by_model.items() %}
+| {{ model }} | {{ data.prompt_tokens }} |
+{{ data.completion_tokens }} | {{ data.total_tokens }} |
+{{ data.calls }} | {{ data.duration_ms }} |
+{% endfor %}
+{% endif %}
 
 {% if metadata.warnings %}
 ### Uyarılar
@@ -289,6 +333,26 @@ HTML_TEMPLATE = """\
   </ul>
   {% endif %}
 
+  {% if fact_check_items %}
+  <h2>Sorun Gerçeklik Değerlendirmesi (Fact Check)</h2>
+  <p>
+    <span class="badge badge-valid">Onaylanan: {{ fact_check_confirmed }}</span>
+    <span class="badge badge-invalid">Çürütülen: {{ fact_check_refuted }}</span>
+    <span class="badge badge-uncertain">Belirsiz: {{ fact_check_uncertain }}</span>
+  </p>
+  <table>
+    <tr><th>ID</th><th>Durum</th><th>Gerçeklik Skoru</th><th>Düzeltme</th></tr>
+    {% for item in fact_check_items %}
+    <tr>
+      <td>{{ item.issue_id }}</td>
+      <td>{{ item.verdict_label }}</td>
+      <td>{{ item.score_pct }}</td>
+      <td>{{ item.fix_summary }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
   {% if metadata.warnings %}
   <div class="warnings">
     <strong>Uyarılar:</strong>
@@ -298,6 +362,26 @@ HTML_TEMPLATE = """\
     {% endfor %}
     </ul>
   </div>
+  {% endif %}
+
+  {% if token_by_model %}
+  <h2>Token Kullanımı</h2>
+  <p><strong>Toplam:</strong> {{ token_total }} token
+    ({{ token_total_prompt }} prompt + {{ token_total_completion }} completion)
+    &bull; <strong>Çağrı:</strong> {{ token_total_calls }}</p>
+  <table>
+    <tr><th>Model</th><th>Prompt</th><th>Completion</th><th>Toplam</th><th>Çağrı</th><th>Süre (ms)</th></tr>
+    {% for model, data in token_by_model.items() %}
+    <tr>
+      <td>{{ model }}</td>
+      <td>{{ data.prompt_tokens }}</td>
+      <td>{{ data.completion_tokens }}</td>
+      <td>{{ data.total_tokens }}</td>
+      <td>{{ data.calls }}</td>
+      <td>{{ data.duration_ms }}</td>
+    </tr>
+    {% endfor %}
+  </table>
   {% endif %}
 
   <div class="footer">Doc Quality Gate v0.1.0 tarafından oluşturuldu</div>
@@ -385,6 +469,49 @@ def generate_reports(
         "invalid_count": invalid_count,
         "uncertain_count": uncertain_count,
     }
+
+    fc = artifacts.fact_check
+    if fc:
+        fc_items = []
+        fc_confirmed_fixes = []
+        for item in fc.items:
+            verdict_labels = {
+                RealityVerdict.CONFIRMED: "✅ ONAYLANDI",
+                RealityVerdict.REFUTED: "❌ ÇÜRÜTÜLDÜ",
+                RealityVerdict.UNCERTAIN: "❓ BELİRSİZ",
+            }
+            fix_summary = "Var" if item.proposed_fix else "-"
+            fc_items.append({
+                "issue_id": item.issue_id,
+                "verdict_label": verdict_labels.get(item.reality_verdict, str(item.reality_verdict.value)),
+                "score_pct": f"{item.reality_score:.0%}",
+                "fix_summary": fix_summary,
+            })
+            if item.reality_verdict == RealityVerdict.CONFIRMED and item.proposed_fix:
+                fc_confirmed_fixes.append({
+                    "issue_id": item.issue_id,
+                    "section": item.proposed_fix.section,
+                    "fix_description": item.proposed_fix.fix_description,
+                })
+
+        template_vars["fact_check_items"] = fc_items
+        template_vars["fact_check_confirmed"] = fc.confirmed_count
+        template_vars["fact_check_refuted"] = fc.refuted_count
+        template_vars["fact_check_uncertain"] = fc.uncertain_count
+        template_vars["fact_check_confirmed_fixes"] = fc_confirmed_fixes
+    else:
+        template_vars["fact_check_items"] = []
+        template_vars["fact_check_confirmed"] = 0
+        template_vars["fact_check_refuted"] = 0
+        template_vars["fact_check_uncertain"] = 0
+        template_vars["fact_check_confirmed_fixes"] = []
+
+    tu = metadata.token_usage if metadata else {}
+    template_vars["token_by_model"] = tu.get("by_model", {})
+    template_vars["token_total"] = tu.get("total", 0)
+    template_vars["token_total_prompt"] = tu.get("total_prompt_tokens", 0)
+    template_vars["token_total_completion"] = tu.get("total_completion_tokens", 0)
+    template_vars["token_total_calls"] = tu.get("total_calls", 0)
 
     md_report = Template(MARKDOWN_TEMPLATE).render(**template_vars)
     html_report = Template(HTML_TEMPLATE).render(**template_vars)

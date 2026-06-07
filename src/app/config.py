@@ -8,6 +8,18 @@ import yaml
 from pydantic import BaseModel
 
 
+class JiraConfig(BaseModel):
+    base_url: str = os.environ.get("DQG_JIRA_BASE_URL", "https://obilet.atlassian.net")
+    email: str = os.environ.get("DQG_JIRA_EMAIL", "")
+    api_token: str = os.environ.get("DQG_JIRA_API_TOKEN", "")
+    project: str = os.environ.get("DQG_JIRA_PROJECT", "PDB")
+    default_context_path: str = os.environ.get("DQG_JIRA_DEFAULT_CONTEXT_PATH", "")
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.email and self.api_token)
+
+
 class AppConfig(BaseModel):
     proxy_base_url: str = os.environ.get("LITELLM_PROXY_URL", "http://localhost:4000")
     proxy_api_key: str = os.environ.get("LITELLM_PROXY_API_KEY", os.environ.get("LITELLM_MASTER_KEY", ""))
@@ -33,6 +45,8 @@ class AppConfig(BaseModel):
         "meta_judge": "strong_judge",
         "fallback": "fallback_general",
     }
+
+    jira: JiraConfig = JiraConfig()
 
 
 class ThresholdConfig(BaseModel):
@@ -104,6 +118,7 @@ def load_app_config(config_dir: Optional[str] = None) -> AppConfig:
         logging_cfg = raw.get("logging", {})
         model_aliases = raw.get("model_aliases", {})
         pipeline = raw.get("pipeline", {})
+        jira_raw = raw.get("jira", {})
 
         return AppConfig(
             proxy_base_url=_resolve_env(
@@ -123,6 +138,43 @@ def load_app_config(config_dir: Optional[str] = None) -> AppConfig:
             critic_runs=int(_resolve_env(str(pipeline.get("critic_runs", 2)))),
             scorer_runs=int(_resolve_env(str(pipeline.get("scorer_runs", 2)))),
             scorer_max_workers=int(_resolve_env(str(pipeline.get("scorer_max_workers", 2)))),
+            jira=JiraConfig(
+                base_url=_resolve_env(
+                    jira_raw.get(
+                        "base_url",
+                        os.environ.get(
+                            "DQG_JIRA_BASE_URL",
+                            "https://obilet.atlassian.net",
+                        ),
+                    )
+                ),
+                email=_resolve_env(
+                    jira_raw.get(
+                        "email",
+                        os.environ.get("DQG_JIRA_EMAIL", ""),
+                    )
+                ),
+                api_token=_resolve_env(
+                    jira_raw.get(
+                        "api_token",
+                        os.environ.get("DQG_JIRA_API_TOKEN", ""),
+                    )
+                ),
+                project=_resolve_env(
+                    jira_raw.get(
+                        "project",
+                        os.environ.get("DQG_JIRA_PROJECT", "PDB"),
+                    )
+                ),
+                default_context_path=_resolve_env(
+                    jira_raw.get(
+                        "default_context_path",
+                        os.environ.get(
+                            "DQG_JIRA_DEFAULT_CONTEXT_PATH", ""
+                        ),
+                    )
+                ),
+            ),
         )
     return AppConfig()
 
@@ -189,3 +241,53 @@ def load_model_routing(config_dir: Optional[str] = None) -> ModelRoutingConfig:
         model_groups=groups,
         routing=raw.get("routing", {}),
     )
+
+
+_pipeline_profile_cache: Optional[dict] = None
+
+
+def load_pipeline_profile_config(config_dir: Optional[str] = None) -> dict:
+    global _pipeline_profile_cache
+    if _pipeline_profile_cache is not None:
+        return _pipeline_profile_cache
+
+    config_dir = _resolve_config_dir(config_dir)
+    profiles_yaml = Path(config_dir) / "pipeline_profiles.yaml"
+    if not profiles_yaml.exists():
+        _pipeline_profile_cache = {
+            "default_profile": "deep",
+            "profiles": {
+                "deep": {
+                    "stages": [
+                        "ingest", "domain_context", "cross_reference", "deep_analysis",
+                        "critic_a_multi", "critic_b_multi", "critic_a_judge", "critic_b_judge",
+                        "dedupe", "validate", "revise", "score", "meta_judge", "fact_check", "report",
+                    ],
+                    "skip_stages": [],
+                    "early_exit": False,
+                    "estimated_latency_seconds": 600,
+                    "quality_confidence": 0.98,
+                }
+            },
+            "parallel_groups": {},
+            "stage_durations": {},
+            "complexity_router": {"thresholds": {"minor_change": 3, "standard": 6, "major_change": 10}, "profile_mapping": {"minor": "fast_track", "standard": "standard", "major": "deep"}},
+            "early_exit_rules": {},
+        }
+        return _pipeline_profile_cache
+
+    with open(profiles_yaml) as f:
+        _pipeline_profile_cache = yaml.safe_load(f) or {}
+
+    return _pipeline_profile_cache
+
+
+def get_pipeline_profile(profile_name: str, config_dir: Optional[str] = None) -> dict:
+    config = load_pipeline_profile_config(config_dir)
+    profiles = config.get("profiles", {})
+    return profiles.get(profile_name, profiles.get("deep", {}))
+
+
+def get_stage_durations(config_dir: Optional[str] = None) -> dict[str, float]:
+    config = load_pipeline_profile_config(config_dir)
+    return config.get("stage_durations", {})

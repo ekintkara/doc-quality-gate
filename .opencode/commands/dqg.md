@@ -8,11 +8,63 @@ CRITICAL RULES — READ THESE BEFORE PROCEEDING:
 1. Do NOT run `start.ps1`, `start.bat`, `start.sh`, or any setup script. They will block the terminal.
 2. Do NOT start LiteLLM proxy or web server manually.
 3. Do NOT write your own Python commands or HTTP calls.
-4. The ONLY commands you need are in Steps 2 and 3 below.
-
-**Step 1 — Resolve the document path**
+4. The ONLY commands you need are the `python DQG_SCRIPT ...` commands below.
 
 The user invoked `/dqg $ARGUMENTS`.
+
+**Step 0 — Detect mode: `from-jira` vs `review`**
+
+Parse the arguments to detect the mode:
+
+- If arguments start with `from-jira`, this is a **Jira task mode**. Example: `/dqg from-jira PDB-11139 --cp C:\OBTaskManager\obiletcontext`
+  - `$1` = `from-jira`, `$2` = task key (e.g. `PDB-11139`), remaining = flags
+  - Supported flags: `--cp PATH`, `--project PATH`, `--generate-only`
+  - Skip to **Step 1-Jira** below.
+
+- Otherwise, this is a **document review mode**. Example: `/dqg path/to/plan.md --cp C:\OBTaskManager\obiletcontext`
+  - The first non-flag argument is the document path.
+  - Continue to **Step 1-Review** below.
+
+---
+
+## JIRA TASK MODE
+
+**Step 1-Jira — Find DQG script and launch from-jira review**
+
+Find the DQG script path:
+
+!`python -c "from pathlib import Path; p=Path.home()/'.config'/'opencode'/'dqg_home'; print(Path(p.read_text('utf-8-sig').strip())/'scripts'/'dqg_run.py')"`
+
+Launch the from-jira review asynchronously. This starts services if needed, reads the Jira task, generates an implementation document, and kicks off the full DQG pipeline. It returns immediately with a REVIEW_ID:
+
+!`python DQG_SCRIPT launch-from-jira TASK_KEY`{{append `--cp CONTEXT_PATH` if --cp was provided}}{{append `--project PROJECT_PATH` if --project was provided}}{{append `--generate-only` if --generate-only was specified}}
+
+Set timeout to 60000ms (1 minute) for this command — it should return quickly after launching.
+
+Save the REVIEW_ID from the output.
+
+**Step 2-Jira — Poll for results (repeat until complete)**
+
+Poll for results using the REVIEW_ID from Step 1. Each poll checks a few times (~1 minute). If the review is still running, run the command again. Repeat until you get REVIEW_COMPLETE or REVIEW_FAILED:
+
+!`python DQG_SCRIPT poll REVIEW_ID --max-attempts 6`
+
+If output says `POLL_INCOMPLETE`, just run the same command again. The full from-jira pipeline takes 5-15 minutes total.
+
+Set timeout to 120000ms (2 minutes) for each poll command.
+
+**Step 3-Jira — Present results**
+
+When the poll returns REVIEW_COMPLETE or REVIEW_FAILED, parse the output and present the results:
+
+- If `--generate-only` was used: Show the user the path to the generated document and suggest running `/dqg` on it for review.
+- If full pipeline ran: Parse the output and present the results (score, issues, etc.) — use the PRESENT RESULTS section below.
+
+---
+
+## DOCUMENT REVIEW MODE
+
+**Step 1-Review — Resolve the document path**
 
 Parse the arguments:
 - The first non-flag argument is the document path (e.g. `docs/plan.md` or `./plan.md`).
@@ -28,7 +80,7 @@ Save the absolute document path as DOC_PATH, the current working directory (proj
 
 **Important:** If `--cp` is provided but `--project` is not, PROJECT_PATH defaults to the current working directory automatically. This ensures cross-reference analysis runs against the codebase you're working in.
 
-**Step 2 — Find DQG script and launch the review**
+**Step 2-Review — Find DQG script and launch the review**
 
 First, find the DQG script path:
 
@@ -42,7 +94,7 @@ If the user specified a document type, add `--type TYPE`.
 
 Save the REVIEW_ID from the output.
 
-**Step 3 — Poll for results (repeat until complete)**
+**Step 3-Review — Poll for results (repeat until complete)**
 
 Poll for results using the REVIEW_ID from Step 2. Each poll checks a few times (~1 minute). If the review is still running, run the command again. Repeat until you get REVIEW_COMPLETE or REVIEW_FAILED:
 
@@ -52,9 +104,11 @@ If output says `POLL_INCOMPLETE`, just run the same command again. The review pi
 
 Set timeout to 120000ms (2 minutes) for each poll command.
 
-**Step 4 — Present the results**
+---
 
-Parse the output from the poll command and present clearly:
+## PRESENT RESULTS
+
+Parse the output and present clearly:
 
 ## Doc Quality Gate Results
 
@@ -70,7 +124,7 @@ Parse the output from the poll command and present clearly:
 ### Dimension Scores
 [Brief summary of weakest dimensions]
 
-**Step 5 — Ask the user what to do next**
+**Next step — Ask the user what to do next**
 
 1. **Fix issues** — Revise the implementation document based on the review findings
 2. **Revise code** — Update the actual codebase to align with the document

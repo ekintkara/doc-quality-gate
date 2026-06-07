@@ -4,12 +4,16 @@
 Uses only stdlib. Called by the /dqg opencode command.
 
 Subcommands:
-  auto-review  Full auto: start services, run review async, poll, print results
-  start        Launch review as detached background process
-  status       Check if the latest review is complete
-  report       Print the latest report
-  check-proxy  Check if LiteLLM proxy is running
-  locate       Print the DQG project root path
+  auto-review       Full auto: start services, run review async, poll, print results
+  launch            Launch review as detached background process
+  launch-from-jira  Launch from-jira review async (returns immediately)
+  poll              Poll for review results
+  start             Start a detached review process (legacy)
+  from-jira         Generate document from Jira task and run DQG review (blocking)
+  status            Check if the latest review is complete
+  report            Print the latest report
+  check-proxy       Check if LiteLLM proxy is running
+  locate            Print the DQG project root path
 """
 
 import argparse
@@ -154,9 +158,11 @@ def _start_proxy():
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
     if os.name == "nt":
-        litellm_exe = str(DQG_ROOT / ".venv" / "Scripts" / "litellm.exe")
+        venv_py = str(_venv_python())
         subprocess.Popen(
-            [litellm_exe, "--config", str(litellm_config), "--port", "4000"],
+            [venv_py, "-c",
+             "from litellm.proxy.proxy_cli import run_server; "
+             "run_server(args=['--config', r'" + str(litellm_config) + "', '--port', '4000'])"],
             cwd=str(DQG_ROOT),
             env=env,
             stdout=subprocess.DEVNULL,
@@ -176,6 +182,38 @@ def _start_proxy():
         )
 
 
+def _kill_proxy():
+    try:
+        if os.name == "nt":
+            subprocess.run(
+                ["powershell", "-Command",
+                 "Get-NetTCPConnection -LocalPort 4000 -ErrorAction SilentlyContinue | "
+                 "Select-Object -ExpandProperty OwningProcess | "
+                 "ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"],
+                capture_output=True, timeout=10,
+            )
+        else:
+            subprocess.run(["pkill", "-f", "litellm.*--port 4000"], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
+def _kill_web_server():
+    try:
+        if os.name == "nt":
+            subprocess.run(
+                ["powershell", "-Command",
+                 "Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | "
+                 "Select-Object -ExpandProperty OwningProcess | "
+                 "ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"],
+                capture_output=True, timeout=10,
+            )
+        else:
+            subprocess.run(["pkill", "-f", "app.cli web.*8080"], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
 def _start_web_server():
     _load_env()
     venv_py = str(_venv_python())
@@ -183,29 +221,43 @@ def _start_web_server():
     env["PYTHONPATH"] = str(SRC_DIR)
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
+    log_dir = DQG_ROOT / "outputs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    web_log = open(str(log_dir / "web_server.log"), "w", encoding="utf-8")
     if os.name == "nt":
         subprocess.Popen(
-            [str(venv_py), "-m", "app.cli", "web", "--port", "8080"],
+            [str(venv_py), "-c",
+             "import sys,uvicorn; "
+             "sys.path.insert(0,r'" + str(SRC_DIR).replace("'", "\\'") + "'); "
+             "from app.config import load_app_config; "
+             "from app.utils.logging import setup_logging as _sl; "
+             "_cfg=load_app_config(); _sl('INFO',enable_websocket=True,log_dir=_cfg.log_dir); "
+             "uvicorn.run('app.web.app:app',host='0.0.0.0',port=8080,log_level='info')"],
             cwd=str(DQG_ROOT),
             env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=web_log,
+            stderr=web_log,
             startupinfo=_nt_startup(),
             creationflags=_nt_flags(),
         )
     else:
         subprocess.Popen(
-            [venv_py, "-m", "app.cli", "web", "--port", "8080"],
+            [venv_py, "-c",
+             "import sys,uvicorn; "
+             "sys.path.insert(0,'" + str(SRC_DIR) + "'); "
+             "from app.config import load_app_config; "
+             "from app.utils.logging import setup_logging as _sl; "
+             "_cfg=load_app_config(); _sl('INFO',enable_websocket=True,log_dir=_cfg.log_dir); "
+             "uvicorn.run('app.web.app:app',host='0.0.0.0',port=8080,log_level='info')"],
             cwd=str(DQG_ROOT),
             env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=web_log,
+            stderr=web_log,
             start_new_session=True,
         )
 
 
 def cmd_auto_review(args):
-    _load_env()
     launch_args = argparse.Namespace(
         doc_path=args.doc_path,
         project=args.project,
@@ -236,8 +288,124 @@ def cmd_auto_review(args):
     cmd_poll(poll_args)
 
 
+def cmd_from_jira(args):
+    task_key = args.task_key
+    context_path = getattr(args, "context_path", None)
+    project_path = getattr(args, "project", None)
+    generate_only = getattr(args, "generate_only", False)
+
+    if not context_path:
+        from dotenv import dotenv_values
+
+        env_vals = dotenv_values(str(_ENV_FILE))
+        context_path = env_vals.get("DQG_JIRA_DEFAULT_CONTEXT_PATH")
+
+    if project_path:
+        project_path = str(Path(project_path).resolve())
+    elif context_path:
+        project_path = str(Path.cwd().resolve())
+    if context_path:
+        context_path = str(Path(context_path).resolve())
+
+    payload = {"task_key": task_key}
+    if context_path:
+        payload["context_path"] = context_path
+    if project_path:
+        payload["project_path"] = project_path
+    if generate_only:
+        payload["generate_only"] = True
+
+    result = _api_post("http://localhost:8080/api/review/from-jira", payload, timeout=15)
+    if not result or "error" in result:
+        print(f"FATAL: Could not start from-jira review: {result}")
+        sys.exit(1)
+
+    review_id = result.get("review_id")
+    print(f"REVIEW_ID: {review_id}")
+
+    poll_args = argparse.Namespace(review_id=review_id, max_attempts=200)
+    cmd_poll(poll_args)
+
+
+def cmd_launch_from_jira(args):
+    task_key = args.task_key
+    context_path = getattr(args, "context_path", None)
+    project_path = getattr(args, "project", None)
+    generate_only = getattr(args, "generate_only", False)
+
+    if not context_path:
+        from dotenv import dotenv_values
+
+        env_vals = dotenv_values(str(_ENV_FILE))
+        context_path = env_vals.get("DQG_JIRA_DEFAULT_CONTEXT_PATH")
+
+    if project_path:
+        project_path = str(Path(project_path).resolve())
+    elif context_path:
+        project_path = str(Path.cwd().resolve())
+    if context_path:
+        context_path = str(Path(context_path).resolve())
+
+    print(f"JIRA_TASK: {task_key}")
+    if context_path:
+        print(f"CONTEXT_PATH: {context_path}")
+    if project_path:
+        print(f"PROJECT_PATH: {project_path}")
+
+    payload = {"task_key": task_key}
+    if context_path:
+        payload["context_path"] = context_path
+    if project_path:
+        payload["project_path"] = project_path
+    if generate_only:
+        payload["generate_only"] = True
+
+    result = _api_post("http://localhost:8080/api/review/from-jira", payload, timeout=15)
+    if not result or "error" in result:
+        print(f"FATAL: Could not start from-jira review: {result}")
+        sys.exit(1)
+
+    review_id = result.get("review_id")
+    print(f"REVIEW_STARTED review_id={review_id}")
+    print(f"Use: python {__file__} poll {review_id}")
+
+
+_SERVICE_COMMANDS = {"launch", "launch-from-jira", "auto-review", "from-jira", "review", "start"}
+
+
+def _ensure_services():
+    proxy_up = _check_proxy()
+    web_up = _check_web()
+
+    if proxy_up and web_up:
+        print("Services already running (proxy + web).")
+        return
+
+    if web_up:
+        print("Cancelling active pipeline (if any)...")
+        _api_post("http://localhost:8080/api/pipeline/cancel", {}, timeout=5)
+        time.sleep(1)
+
+    if not proxy_up:
+        print("Starting LiteLLM proxy...")
+        _start_proxy()
+        if not _wait_for(_check_proxy, "PROXY", max_attempts=30, interval=2.0):
+            print("FATAL: LiteLLM proxy could not start. Check .env for ZAI_API_KEY.")
+            sys.exit(1)
+
+    if not web_up:
+        print("Starting DQG web server...")
+        _start_web_server()
+        if not _wait_for(_check_web, "WEB", max_attempts=15, interval=2.0):
+            print("FATAL: DQG web server could not start.")
+            sys.exit(1)
+
+        import webbrowser
+        webbrowser.open("http://localhost:8080")
+        print("WEB_UI_OPENED http://localhost:8080")
+
+
 def cmd_launch(args):
-    _load_env()
     venv_py = _venv_python()
     if not venv_py.exists():
         print(f"ERROR: Virtual environment not found at {venv_py}")
@@ -262,24 +430,6 @@ def cmd_launch(args):
         print(f"PROJECT_PATH: {project_path}")
     if context_path:
         print(f"CONTEXT_PATH: {context_path}")
-
-    if _check_proxy():
-        print("PROXY_OK")
-    else:
-        print("PROXY_DOWN - starting LiteLLM proxy...")
-        _start_proxy()
-        if not _wait_for(_check_proxy, "PROXY", max_attempts=30, interval=2.0):
-            print("FATAL: LiteLLM proxy could not start. Check .env for ZAI_API_KEY.")
-            sys.exit(1)
-
-    if _check_web():
-        print("WEB_OK")
-    else:
-        print("WEB_DOWN - starting DQG web server...")
-        _start_web_server()
-        if not _wait_for(_check_web, "WEB", max_attempts=15, interval=2.0):
-            print("FATAL: DQG web server could not start.")
-            sys.exit(1)
 
     payload = {"file_path": doc_path, "project_path": project_path or "."}
     if doc_type:
@@ -481,6 +631,24 @@ def cmd_locate(args):
     print(DQG_ROOT)
 
 
+def cmd_rescore(args):
+    previous_review_id = args.review_id
+    revised_file_path = getattr(args, "revised_file_path", None)
+
+    payload = {"previous_review_id": previous_review_id}
+    if revised_file_path:
+        payload["revised_file_path"] = str(Path(revised_file_path).resolve())
+
+    result = _api_post("http://localhost:8080/api/review/rescore", payload, timeout=10)
+    if not result or "error" in result:
+        print(f"FATAL: Could not start rescore: {result}")
+        sys.exit(1)
+
+    new_review_id = result.get("review_id")
+    print(f"RESCORE_STARTED review_id={new_review_id} from={previous_review_id}")
+    print(f"Use: python {__file__} poll {new_review_id}")
+
+
 def cmd_check_proxy(args):
     print("PROXY_OK" if _check_proxy() else "PROXY_DOWN")
 
@@ -534,10 +702,35 @@ def main():
     p = sub.add_parser("check-proxy")
     p.set_defaults(func=cmd_check_proxy)
 
+    p = sub.add_parser("from-jira", help="Generate document from Jira task and run DQG review (blocking)")
+    p.add_argument("task_key", help="Jira task key (e.g. PDB-11139)")
+    p.add_argument("--cp", dest="context_path", default=None, help="Path to domain context directory")
+    p.add_argument("--project", "-p", default=None, help="Path to target project for cross-reference")
+    p.add_argument("--generate-only", action="store_true", help="Generate document only, skip DQG review")
+    p.set_defaults(func=cmd_from_jira)
+
+    p = sub.add_parser("launch-from-jira", help="Launch from-jira review async (returns immediately)")
+    p.add_argument("task_key", help="Jira task key (e.g. PDB-11139)")
+    p.add_argument("--cp", dest="context_path", default=None, help="Path to domain context directory")
+    p.add_argument("--project", "-p", default=None, help="Path to target project for cross-reference")
+    p.add_argument("--generate-only", action="store_true", help="Generate document only, skip DQG review")
+    p.set_defaults(func=cmd_launch_from_jira)
+
+    p = sub.add_parser("rescore", help="Rescore previous review (fast: only score + meta_judge)")
+    p.add_argument("review_id", help="Previous review ID to rescore")
+    p.add_argument("--revised", dest="revised_file_path", default=None, help="Path to revised document (default: uses previous revised.md)")
+    p.set_defaults(func=cmd_rescore)
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
         sys.exit(1)
+
+    _load_env()
+
+    if args.command in _SERVICE_COMMANDS:
+        _ensure_services()
+
     args.func(args)
 
 

@@ -14,6 +14,7 @@ pipeline:
   scorer_runs: ${DQG_SCORER_RUNS:2}
   scorer_max_workers: ${DQG_SCORER_MAX_WORKERS:2}
   context_path: ${DQG_CONTEXT_PATH:}
+  default_profile: ${DQG_DEFAULT_PROFILE:auto}
 
 output:
   base_dir: ${DQG_OUTPUT_DIR:outputs/runs}

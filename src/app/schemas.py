@@ -127,10 +127,70 @@ class RunMetadata(BaseModel):
     actual_models_used: dict[str, Optional[str]] = Field(default_factory=dict)
     proxy_base_url: str = ""
     execution_status: str = "pending"
-    token_usage: dict[str, int] = Field(default_factory=dict)
+    token_usage: dict = Field(default_factory=dict)
     estimated_cost: float = 0.0
     warnings: list[str] = Field(default_factory=list)
     duration_ms: Optional[int] = None
+
+
+class RealityVerdict(str, Enum):
+    CONFIRMED = "confirmed"
+    REFUTED = "refuted"
+    UNCERTAIN = "uncertain"
+
+
+class ProposedFix(BaseModel):
+    section: str = ""
+    current_text: str = ""
+    suggested_text: str = ""
+    fix_description: str = ""
+
+
+class FactCheckItem(BaseModel):
+    issue_id: str
+    reality_verdict: RealityVerdict = RealityVerdict.UNCERTAIN
+    reality_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    evidence_for: list[str] = Field(default_factory=list)
+    evidence_against: list[str] = Field(default_factory=list)
+    proposed_fix: Optional[ProposedFix] = None
+    auto_applicable: bool = False
+
+
+class FactCheckResult(BaseModel):
+    items: list[FactCheckItem] = Field(default_factory=list)
+    confirmed_count: int = 0
+    refuted_count: int = 0
+    uncertain_count: int = 0
+    summary: str = ""
+    approved_fix_ids: list[str] = Field(default_factory=list)
+
+
+class TaskClarityStatus(str, Enum):
+    CLEAR = "clear"
+    NEEDS_CLARIFICATION = "needs_clarification"
+    INSUFFICIENT = "insufficient"
+
+
+class TaskAnalysis(BaseModel):
+    task_key: str = ""
+    summary: str = ""
+    description: str = ""
+    clarity_status: TaskClarityStatus = TaskClarityStatus.NEEDS_CLARIFICATION
+    clarity_score: float = Field(default=0.0, ge=0.0, le=10.0)
+    missing_fields: list[str] = Field(default_factory=list)
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    impacted_areas: list[str] = Field(default_factory=list)
+    target_environment: str = ""
+    dependencies: str = ""
+    labels: list[str] = Field(default_factory=list)
+    components: list[str] = Field(default_factory=list)
+    reporter: str = ""
+    assignee: str = ""
+    priority: str = ""
+    status: str = ""
+    created_date: str = ""
+    comments_summary: str = ""
+    enriched_description: str = ""
 
 
 class RunArtifacts(BaseModel):
@@ -143,3 +203,5 @@ class RunArtifacts(BaseModel):
     scorecard: Optional[Scorecard] = None
     promptfoo_raw: Optional[dict] = None
     metadata: Optional[RunMetadata] = None
+    fact_check: Optional[FactCheckResult] = None
+    task_analysis: Optional[TaskAnalysis] = None

@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import threading
 import time
 import uuid
 from collections import deque
 from typing import Optional
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 import structlog
 
 logger = structlog.get_logger("log_stream")
+
+_DEFAULT_WEB_URL = "http://localhost:8080"
 
 
 class LogBroadcaster:
@@ -29,6 +35,13 @@ class LogBroadcaster:
             "started_at": None,
             "finished_at": None,
         }
+        self._forward_url: Optional[str] = None
+        self._forward_buffer: deque[dict] = deque(maxlen=500)
+        self._forward_lock = threading.Lock()
+        self._forward_thread: Optional[threading.Thread] = None
+        self._forward_running = False
+        self._forward_available: Optional[bool] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     @classmethod
     def get(cls) -> LogBroadcaster:
@@ -44,6 +57,7 @@ class LogBroadcaster:
         self._active_run_id = run_id
 
     def subscribe(self) -> tuple[str, asyncio.Queue]:
+        self._loop = asyncio.get_running_loop()
         client_id = str(uuid.uuid4())[:8]
         queue: asyncio.Queue = asyncio.Queue()
         self._subscribers[client_id] = queue
@@ -56,14 +70,85 @@ class LogBroadcaster:
 
     def publish(self, message: dict) -> None:
         self._history.append(message)
-        dead = []
-        for cid, queue in self._subscribers.items():
-            try:
-                queue.put_nowait(message)
-            except asyncio.QueueFull:
-                dead.append(cid)
-        for cid in dead:
+        if self._loop and self._loop.is_running():
+            for cid, queue in list(self._subscribers.items()):
+                try:
+                    self._loop.call_soon_threadsafe(self._safe_put, cid, queue, message)
+                except RuntimeError:
+                    self._subscribers.pop(cid, None)
+        else:
+            dead = []
+            for cid, queue in self._subscribers.items():
+                try:
+                    queue.put_nowait(message)
+                except asyncio.QueueFull:
+                    dead.append(cid)
+            for cid in dead:
+                self._subscribers.pop(cid, None)
+
+        if self._forward_url and self._forward_available is not False:
+            with self._forward_lock:
+                self._forward_buffer.append(message)
+
+    def _safe_put(self, cid: str, queue: asyncio.Queue, message: dict):
+        try:
+            queue.put_nowait(message)
+        except asyncio.QueueFull:
             self._subscribers.pop(cid, None)
+
+    def enable_http_forward(self, url: str = _DEFAULT_WEB_URL) -> bool:
+        self._forward_url = url.rstrip("/")
+        try:
+            req = Request(f"{self._forward_url}/api/status")
+            resp = urlopen(req, timeout=3)
+            self._forward_available = resp.status == 200
+        except Exception:
+            self._forward_available = False
+
+        if self._forward_available:
+            self._forward_running = True
+            self._forward_thread = threading.Thread(target=self._forward_loop, daemon=True)
+            self._forward_thread.start()
+            logger.info("http_forward_enabled", url=self._forward_url)
+        else:
+            logger.warning("http_forward_unavailable", url=self._forward_url)
+
+        return self._forward_available
+
+    def stop_http_forward(self) -> None:
+        self._forward_running = False
+        if self._forward_thread:
+            self._forward_thread.join(timeout=5)
+        self._flush_forward()
+
+    def _forward_loop(self) -> None:
+        while self._forward_running:
+            time.sleep(0.15)
+            self._flush_forward()
+
+    def _flush_forward(self) -> None:
+        with self._forward_lock:
+            if not self._forward_buffer:
+                return
+            events = list(self._forward_buffer)
+            self._forward_buffer.clear()
+
+        if not self._forward_available or not self._forward_url:
+            return
+
+        try:
+            data = json.dumps({"events": events}).encode("utf-8")
+            req = Request(
+                f"{self._forward_url}/api/events/ingest",
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            resp = urlopen(req, timeout=3)
+            if resp.status != 200:
+                self._forward_available = False
+        except Exception:
+            self._forward_available = False
 
     def push_log(self, level: str, message: str, source: str = "system", run_id: Optional[str] = None, **extra) -> None:
         entry = {
@@ -161,8 +246,8 @@ class LogBroadcaster:
         duration_ms: float,
         run_id: Optional[str] = None,
     ) -> None:
-        MAX_MSG_PREVIEW = 300
-        MAX_RESP_PREVIEW = 500
+        MAX_MSG_PREVIEW = 50000
+        MAX_RESP_PREVIEW = 100000
 
         request_summary = []
         for msg in messages:
