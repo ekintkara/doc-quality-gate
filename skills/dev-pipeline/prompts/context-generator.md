@@ -2,6 +2,12 @@
 
 This document describes how to generate project context from a codebase when no pre-existing context directory is available.
 
+## Contents
+- Goal
+- Analysis Steps (Read docs → Query codebase → Investigate files → Generate context → Save)
+- Context File Templates (architecture.md, conventions.md, domain.md, patterns.md)
+- Important Notes
+
 ## Goal
 
 Analyze the codebase and create a structured context directory that DQG and the pipeline can use to understand the project's architecture, conventions, domain, and patterns.

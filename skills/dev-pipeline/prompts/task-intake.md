@@ -2,6 +2,12 @@
 
 This document describes how to read tasks from different sources.
 
+## Contents
+- Source Detection (pattern matching rules)
+- Source-Specific Reading: Jira (MCP/acli/API), Azure DevOps, GitHub Issues, File, Manual
+- Post-Reading: Context Discovery
+- Output
+
 ## Source Detection
 
 Parse the user's input to determine the task source:

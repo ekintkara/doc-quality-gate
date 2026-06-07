@@ -2,6 +2,13 @@
 
 This document describes how to ensure DQG is installed, configured, and running before the pipeline starts.
 
+## Contents
+- Configuration
+- Check Flow (0-7): Git → Directory → Python → Venv → Env config → Proxy → Dashboard → Smoke test
+- Quick Start Script
+- Self-Healing Summary
+- Important Notes
+
 ## Configuration
 
 Read from AGENTS.md `## Pipeline Config` section:
@@ -9,7 +16,7 @@ Read from AGENTS.md `## Pipeline Config` section:
 - `dqg_repo`: Git repository URL to clone from
 
 **Defaults:**
-- `dqg_path`: `C:\repos\doc-quailty-gate` (Windows) or `~/doc-quality-gate` (Linux/macOS)
+- `dqg_path`: `~/doc-quailty-gate`
 - `dqg_repo`: `https://github.com/ekintkara/doc-quailty-gate.git`
 
 ## Check Flow
