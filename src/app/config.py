@@ -9,10 +9,10 @@ from pydantic import BaseModel
 
 
 class JiraConfig(BaseModel):
-    base_url: str = os.environ.get("DQG_JIRA_BASE_URL", "https://obilet.atlassian.net")
+    base_url: str = os.environ.get("DQG_JIRA_BASE_URL", "")
     email: str = os.environ.get("DQG_JIRA_EMAIL", "")
     api_token: str = os.environ.get("DQG_JIRA_API_TOKEN", "")
-    project: str = os.environ.get("DQG_JIRA_PROJECT", "PDB")
+    project: str = os.environ.get("DQG_JIRA_PROJECT", "")
     default_context_path: str = os.environ.get("DQG_JIRA_DEFAULT_CONTEXT_PATH", "")
 
     @property
@@ -144,7 +144,7 @@ def load_app_config(config_dir: Optional[str] = None) -> AppConfig:
                         "base_url",
                         os.environ.get(
                             "DQG_JIRA_BASE_URL",
-                            "https://obilet.atlassian.net",
+                            "",
                         ),
                     )
                 ),

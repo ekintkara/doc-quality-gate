@@ -51,7 +51,7 @@ def review(
         None,
         "--context-path",
         "--cp",
-        help="Path to structured domain context directory (e.g. obiletcontext/). "
+        help="Path to structured domain context directory (e.g. context/). "
         "Overrides auto-discovery. Contains architecture.md, conventions.md, domain/ etc.",
     ),
     profile: Optional[str] = typer.Option(
@@ -427,12 +427,12 @@ def web(
 
 @app.command(name="from-jira")
 def from_jira(
-    task_key: str = typer.Argument(..., help="Jira issue key (e.g. PDB-11139)"),
+    task_key: str = typer.Argument(..., help="Jira issue key (e.g. PROJ-123)"),
     context_path: Optional[str] = typer.Option(
         None,
         "--context-path",
         "--cp",
-        help="Path to structured domain context directory (e.g. C:\\OBTaskManager\\obiletcontext). "
+        help="Path to structured domain context directory (e.g. C:\\projects\\my-context). "
         "If not set, uses DQG_JIRA_DEFAULT_CONTEXT_PATH from config.",
     ),
     project: Optional[str] = typer.Option(

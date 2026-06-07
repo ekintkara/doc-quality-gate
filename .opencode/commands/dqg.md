@@ -16,12 +16,12 @@ The user invoked `/dqg $ARGUMENTS`.
 
 Parse the arguments to detect the mode:
 
-- If arguments start with `from-jira`, this is a **Jira task mode**. Example: `/dqg from-jira PDB-11139 --cp C:\OBTaskManager\obiletcontext`
-  - `$1` = `from-jira`, `$2` = task key (e.g. `PDB-11139`), remaining = flags
+- If arguments start with `from-jira`, this is a **Jira task mode**. Example: `/dqg from-jira PROJ-123 --cp C:\projects\my-context`
+  - `$1` = `from-jira`, `$2` = task key (e.g. `PROJ-123`), remaining = flags
   - Supported flags: `--cp PATH`, `--project PATH`, `--generate-only`
   - Skip to **Step 1-Jira** below.
 
-- Otherwise, this is a **document review mode**. Example: `/dqg path/to/plan.md --cp C:\OBTaskManager\obiletcontext`
+- Otherwise, this is a **document review mode**. Example: `/dqg path/to/plan.md --cp C:\projects\my-context`
   - The first non-flag argument is the document path.
   - Continue to **Step 1-Review** below.
 
@@ -74,7 +74,7 @@ Parse the arguments:
   3. `plans/*.md`
   4. `design/*.md`
   Pick the most recently modified one and confirm with the user before proceeding.
-- `--cp PATH` — (optional) Path to a structured domain context directory (e.g. `C:\OBTaskManager\obiletcontext`). This contains architecture, conventions, domain docs etc.
+- `--cp PATH` — (optional) Path to a structured domain context directory (e.g. `C:\projects\my-context`). This contains architecture, conventions, domain docs etc.
 
 Save the absolute document path as DOC_PATH, the current working directory (project root) as PROJECT_PATH, and any context path as CONTEXT_PATH.
 

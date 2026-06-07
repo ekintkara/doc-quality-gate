@@ -502,13 +502,13 @@ Dashboard özellikleri:
 Bir Jira task'ından otomatik olarak implementasyon dokümanı üretin ve DQG analizi yapın:
 
 ```bash
-dqg from-jira PDB-11139 --cp C:\OBTaskManager\obiletcontext
+dqg from-jira PROJ-123 --cp C:\projects\my-context
 ```
 
 **Jira akışı:**
 
 ```
-Jira Task (PDB-11139)
+Jira Task (PROJ-123)
        │
        ▼
 ┌──────────────┐
@@ -547,7 +547,7 @@ Jira Task (PDB-11139)
 Konfigürasyon:
 
 ```env
-DQG_JIRA_BASE_URL=https://obilet.atlassian.net
+DQG_JIRA_BASE_URL=https://your-site.atlassian.net
 DQG_JIRA_EMAIL=your.email@company.com
 DQG_JIRA_API_TOKEN=your-api-token
 DQG_JIRA_PROJECT=PDB
@@ -557,7 +557,7 @@ DQG_JIRA_DEFAULT_CONTEXT_PATH=C:\path\to\context
 Sadece doküman üretimi (analiz yok):
 
 ```bash
-dqg from-jira PDB-11139 --cp C:\context --generate-only
+dqg from-jira PROJ-123 --cp C:\context --generate-only
 ```
 
 ### Pipeline Simülatörü

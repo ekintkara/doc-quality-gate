@@ -458,7 +458,7 @@ def generate_document(
 
     document = _TEMPLATE.format(
         title=analysis.summary or analysis.task_key,
-        task_url=f"https://obilet.atlassian.net/browse/{analysis.task_key}",
+        task_url=f"https://jira.example.com/browse/{analysis.task_key}",
         priority=analysis.priority or "N/A",
         status=analysis.status or "N/A",
         assignee=analysis.assignee or "N/A",

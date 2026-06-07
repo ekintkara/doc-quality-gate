@@ -155,7 +155,7 @@ Document Generator (`document_generator.py`), task analizi sonuçlarını kullan
 ```markdown
 # {Task Başlığı}
 
-**Task:** https://obilet.atlassian.net/browse/{TASK_KEY}
+**Task:** https://your-site.atlassian.net/browse/{TASK_KEY}
 **Öncelik:** {priority} | **Durum:** {status}
 **Atanan:** {assignee} | **Raporlayan:** {reporter}
 **Oluşturulma:** {created_date}
@@ -237,14 +237,14 @@ Eğer task netlik durumu `CLEAR` değilse, dökümana bir uyarı eklenir:
 Jira task'ından döküman üretip DQG review çalıştırır (bloklanarak, sonuçlar terminale yazılır):
 
 ```powershell
-python scripts/dqg_run.py from-jira PDB-11139 --cp C:\OBTaskManager\obiletcontext
+python scripts/dqg_run.py from-jira PROJ-123 --cp C:\projects\my-context
 ```
 
 **Tüm Parametreler:**
 
 | Parametre | Zorunlu | Açıklama |
 |-----------|---------|----------|
-| `task_key` | Evet | Jira task anahtarı (örn: `PDB-11139`) |
+| `task_key` | Evet | Jira task anahtarı (örn: `PROJ-123`) |
 | `--cp` | Hayır | Domain context dizini yolu |
 | `--project` | Hayır | Cross-reference için hedef proje yolu |
 | `--generate-only` | Hayır | Sadece döküman üret, DQG review atla |
@@ -253,16 +253,16 @@ python scripts/dqg_run.py from-jira PDB-11139 --cp C:\OBTaskManager\obiletcontex
 
 ```powershell
 # Sadece context ile
-python scripts/dqg_run.py from-jira PDB-11139 --cp C:\OBTaskManager\obiletcontext
+python scripts/dqg_run.py from-jira PROJ-123 --cp C:\projects\my-context
 
 # Context + proje cross-reference ile
-python scripts/dqg_run.py from-jira PDB-11139 \
-  --cp C:\OBTaskManager\obiletcontext \
-  --project C:\obilet-core-v2
+python scripts/dqg_run.py from-jira PROJ-123 \
+  --cp C:\projects\my-context \
+  --project C:\my-project
 
 # Sadece döküman üret (DQG review yok)
-python scripts/dqg_run.py from-jira PDB-11139 \
-  --cp C:\OBTaskManager\obiletcontext \
+python scripts/dqg_run.py from-jira PROJ-123 \
+  --cp C:\projects\my-context \
   --generate-only
 ```
 
@@ -272,7 +272,7 @@ Review'ı arka planda başlatır ve hemen geri döner. Sonuçları `poll` komutu
 
 ```powershell
 # Başlat
-python scripts/dqg_run.py launch-from-jira PDB-11139 --cp C:\OBTaskManager\obiletcontext
+python scripts/dqg_run.py launch-from-jira PROJ-123 --cp C:\projects\my-context
 
 # Çıktı: REVIEW_STARTED review_id=abc123def456
 
@@ -312,8 +312,8 @@ Jira'dan üretilen döküman ilk çalıştırmada genellikle 6-8 arasında skor 
 
    # Köklü değişiklikler:
    python scripts/dqg_run.py launch {düzeltilmiş-dosya.md} \
-     --project C:\obilet-core-v2 \
-     --cp C:\OBTaskManager\obiletcontext
+     --project C:\my-project \
+     --cp C:\projects\my-context
 ```
 
 ### Önerilen İterasyon Sayısı
@@ -337,15 +337,15 @@ Jira entegrasyonu için `.env` dosyasına şu değişkenler eklenmelidir:
 
 ```env
 # Jira Bağlantı Bilgileri
-DQG_JIRA_BASE_URL=https://obilet.atlassian.net
-DQG_JIRA_EMAIL=your.email@obilet.com
+DQG_JIRA_BASE_URL=https://your-site.atlassian.net
+DQG_JIRA_EMAIL=your.email@example.com
 DQG_JIRA_API_TOKEN=your-api-token
 
 # Jira Proje Konfigürasyonu
 DQG_JIRA_PROJECT=PDB
 
 # Varsayılan Domain Context Yolu
-DQG_JIRA_DEFAULT_CONTEXT_PATH=C:\OBTaskManager\obiletcontext
+DQG_JIRA_DEFAULT_CONTEXT_PATH=C:\projects\my-context
 ```
 
 | Değişken | Zorunlu | Açıklama |
@@ -370,9 +370,9 @@ Jira entegrasyonu Web API üzerinden de kullanılabilir:
 
 ```json
 {
-  "task_key": "PDB-11139",
-  "context_path": "C:\\OBTaskManager\\obiletcontext",
-  "project_path": "C:\\obilet-core-v2",
+  "task_key": "PROJ-123",
+  "context_path": "C:\\projects\\my-context",
+  "project_path": "C:\\my-project",
   "generate_only": false
 }
 ```
@@ -405,7 +405,7 @@ Durum takibi: `GET /api/review/status/{review_id}`
 
 ### "Could not fetch Jira issue"
 
-- Task anahtarının doğru yazıldığından emin olun (örn: `PDB-11139`)
+- Task anahtarının doğru yazıldığından emin olun (örn: `PROJ-123`)
 - API token'ın geçerli olduğunu doğrulayın
 - Jira projesine erişim izniniz olduğunu kontrol edin
 

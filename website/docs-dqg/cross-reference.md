@@ -32,7 +32,7 @@ Domain context çıkarma işlemi şu öncelik sırasına göre çalışır:
 CLI'dan `--context-path` parametresi ile belirtilen dizin. Bu dizin yapılandırılmış domain context dosyaları içerir.
 
 ```
-C:\OBTaskManager\obiletcontext\
+C:\projects\my-context\
 ├── architecture.md
 ├── conventions.md
 ├── glossary.md
@@ -102,7 +102,7 @@ Metadata ise `domain_docs.json` dosyasına kaydedilir:
 
 ```json
 [
-  {"source": "context_path", "path": "C:\\OBTaskManager\\obiletcontext"},
+  {"source": "context_path", "path": "C:\\projects\\my-context"},
   {"source": "md_scan", "path": "docs/api.md", "pre_score": 3}
 ]
 ```
@@ -160,7 +160,7 @@ class Order(SQLModel):      → Order modeli
 Taranan bilgiler, LLM prompt'u için yapılandırılmış bir metne dönüştürülür (`build_context_string()`):
 
 ```markdown
-# Codebase: obilet-core-v2
+# Codebase: my-project
 
 ## Directory Structure
 ```

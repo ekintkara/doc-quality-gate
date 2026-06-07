@@ -23,10 +23,10 @@ def _require_requests() -> None:
 
 @dataclass
 class JiraReaderConfig:
-    base_url: str = "https://obilet.atlassian.net"
+    base_url: str = ""
     email: str = ""
     api_token: str = ""
-    project: str = "PDB"
+    project: str = ""
 
 
 @dataclass
@@ -389,8 +389,8 @@ def build_jira_config_from_env() -> Optional[JiraReaderConfig]:
     if not email or not token:
         return None
     return JiraReaderConfig(
-        base_url=os.environ.get("DQG_JIRA_BASE_URL", "https://obilet.atlassian.net"),
+        base_url=os.environ.get("DQG_JIRA_BASE_URL", ""),
         email=email,
         api_token=token,
-        project=os.environ.get("DQG_JIRA_PROJECT", "PDB"),
+        project=os.environ.get("DQG_JIRA_PROJECT", ""),
     )
