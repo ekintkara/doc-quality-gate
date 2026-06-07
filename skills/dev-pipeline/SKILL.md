@@ -114,3 +114,7 @@ AGENTS.md → CLAUDE.md → .context/ → GEMINI.md → README.md → codebase-r
 - DQG error → self-heal via `prompts/dqg-ensure.md`, retry once
 - Agent error → retry once, report to user
 - Lint/typecheck error → fix (max 3 attempts), ask user if still failing
+
+## Version
+
+See [CHANGELOG.md](CHANGELOG.md) for version history. **Every change MUST have a changelog entry.**
