@@ -50,13 +50,79 @@ Config detaylari icin [Yapilandirma](./configuration) sayfasina bakin.
 
 ## Adim 3: Pipeline Baslatin
 
-AI asistaniniza soyleyin:
+Task kaynaginiza gore AI asistaniniza asagidaki komutlardan birini soyleyin:
+
+### Jira Task
 
 ```
 implement PDB-12345
 ```
 
-Pipeline baslar. **Ilk calistirmada** PHASE 0 (DQG_ENSURE) otomatik olarak:
+veya
+
+```
+/dev-pipeline PDB-12345
+```
+
+Jira task'ini otomatik olarak okur (ADF aciklamasi, yorumlar, label'lar, oncelik). On kosul: `.env` dosyasinda [Jira credentials](/dqg/jira-integration) tanimli olmali.
+
+### Azure DevOps Task
+
+```
+implement AB#456
+```
+
+veya (`azure_devops_org` ve `azure_devops_project` config'i varsa `#` ile de calisir):
+
+```
+implement #456
+```
+
+Azure DevOps work item'ini `az boards work-item show` ile okur. On kosul: [Azure CLI kurulu ve authenticate](./configuration#azure-devops) olmali.
+
+### GitHub Issue
+
+```
+implement ekintkara/my-repo#42
+```
+
+GitHub issue'yu `gh issue view` ile okur. On kosul: [gh CLI authenticate](./configuration#github-issues) olmali.
+
+### Dosya
+
+```
+/dev-pipeline docs/my-task.md
+```
+
+Dosya icerigini dogrudan task aciklamasi olarak kullanir.
+
+### Serbest Metin
+
+```
+/dev-pipeline Login sayfasina remember-me checkbox ekle
+```
+
+Metni dogrudan task olarak kullanir. Herhangi bir entegrasyon kurulumu gerektirmez.
+
+### Pipeline Devam Ettirme
+
+Durdurulan bir pipeline'i kaldiginiz yerden devam ettirmek icin:
+
+```
+continue pipeline
+```
+
+veya
+
+```
+resume pipeline
+```
+
+---
+
+### Ilk Calistirma
+
+**Ilk calistirmada** PHASE 0 (DQG_ENSURE) otomatik olarak:
 
 1. DQG dizinini kontrol eder → yoksa `git clone` yapar
 2. Virtual environment olusturur → `pip install` yapar
@@ -77,7 +143,7 @@ Pipeline baslar. **Ilk calistirmada** PHASE 0 (DQG_ENSURE) otomatik olarak:
   ✓ PDB-12345 Jira'dan okundu
 
 📋 TASK OZETI
-Key: PDB-12345 | Tip: Story | Oncelik: High
+Kaynak: Jira | Key: PDB-12345 | Tip: Story | Oncelik: High
 
 Ne yapilmasi gerekiyor:
 - Kullanici profil sayfasina avatar yukleme ozelligi eklenmeli

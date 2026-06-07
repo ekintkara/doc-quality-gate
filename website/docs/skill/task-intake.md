@@ -19,6 +19,20 @@ Pipeline giris degerine gore task kaynagini otomatik tespit eder:
 | `.md`, `.txt`, `.json` ile biten yol | Dosya | `read` araci |
 | Diger her sey | Serbest metin | Oldugu gibi kullanilir |
 
+## Kullanim Ornekleri
+
+Pipeline'i farkli task kaynaklari ile baslatmak icin:
+
+| Komut | Kaynak | Aciklama |
+|-------|--------|----------|
+| `implement PDB-12345` | Jira | Jira task'ini otomatik okur |
+| `implement AB#456` | Azure DevOps | Azure DevOps work item'ini okur |
+| `implement ekintkara/repo#42` | GitHub Issues | GitHub issue'yu okur |
+| `/dev-pipeline docs/task.md` | Dosya | Dosya icerigini kullanir |
+| `/dev-pipeline Login sayfasina checkbox ekle` | Serbest Metin | Metni task olarak kullanir |
+
+Detayli kurulum ornekleri icin [Hizli Baslangic](./quick-start#adim-3-pipeline-baslatin) sayfasina bakin.
+
 ## Adimlar
 
 1. Input parse edilir ve kaynak tespit edilir
@@ -54,7 +68,31 @@ Jira task'lari icin otomatik olarak:
 - Yorumlar okunur (son 20 yorum)
 - Label'lar, assignee, priority bilgileri alinir
 
-Detayli Jira kurulumu icin [DQG Jira Entegrasyonu](/dqg/jira-integration) dokumanina bakin.
+Detayli Jira kurulumu icin [DQG Jira Entegrasyonu](/dqg/jira-integration) dokumanuna bakin.
+
+## Azure DevOps Entegrasyonu
+
+Azure DevOps work item'lari icin:
+- `AB#456` formati otomatik tespit edilir
+- `az boards work-item show` ile okunur
+- Azure config (`azure_devops_org`, `azure_devops_project`) tanimliysa `#456` formati da calisir
+
+Kurulum icin `az extension add --name azure-devops` calistirin. Detaylar icin [Yapilandirma](./configuration#azure-devops) sayfasina bakin.
+
+## GitHub Issues Entegrasyonu
+
+GitHub issue'lar icin:
+- `owner/repo#42` formati otomatik tespit edilir
+- `gh issue view` ile okunur
+- Baslik, govde, label'lar, assignee bilgileri alinir
+
+Kurulum icin `gh auth login` calistirin. Detaylar icin [Yapilandirma](./configuration#github-issues) sayfasina bakin.
+
+## Dosya ve Serbest Metin
+
+Dosya veya serbest metin kullanimi icin herhangi bir ek kurulum gerekmez:
+- Dosya yolu (`.md`, `.txt`, `.json`) verildiginde dosya icerigi okunur
+- Serbest metin dogrudan task aciklamasi olarak kullanilir
 
 ---
 

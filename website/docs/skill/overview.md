@@ -60,7 +60,17 @@ DQG'nin calisma detaylari icin [DQG Engine dokumantasyonuna](/dqg/overview) baka
 
 ## Ne Zaman Kullanilir?
 
-- "implement PDB-12345" / "implement AB#456" dediginizde
-- "/dev-pipeline PDB-12345" dediginizde
-- "bu taski implement et" dediginizde
-- "continue pipeline" / "resume pipeline" dediginizde
+Asistaniniza asagidaki komutlardan herhangi birini soylediginizde pipeline baslar:
+
+| Komut | Aciklama |
+|-------|----------|
+| `implement PDB-12345` | Jira task'ini uygular |
+| `implement AB#456` | Azure DevOps work item'ini uygular |
+| `implement ekintkara/repo#42` | GitHub issue'yu uygular |
+| `/dev-pipeline docs/task.md` | Dosyadan task uygular |
+| `/dev-pipeline Login sayfasina checkbox ekle` | Serbest metin ile task uygular |
+| `continue pipeline` | Durdurulan pipeline'i devam ettirir |
+| `resume pipeline` | Durdurulan pipeline'i devam ettirir |
+| `bu taski implement et` | Dogal dil ile pipeline baslatir |
+
+Detayli kullanim ornekleri icin [Hizli Baslangic](./quick-start#adim-3-pipeline-baslatin) sayfasina bakin.
