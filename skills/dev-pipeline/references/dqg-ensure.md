@@ -15,9 +15,14 @@ Read from AGENTS.md `## Pipeline Config` section:
 - `dqg_path`: Local path where DQG is/will be installed
 - `dqg_repo`: Git repository URL to clone from
 
-**Defaults:**
-- `dqg_path`: `~/doc-quailty-gate`
-- `dqg_repo`: `https://github.com/ekintkara/doc-quailty-gate.git`
+**Defaults (searched in order):**
+1. `DQG_PATH` env var
+2. `dqg_path` from Pipeline Config in AGENTS.md / CLAUDE.md
+3. `~/doc-quality-gate`
+4. `~/Desktop/doc-quality-gate`
+5. `~/doc-quailty-gate` (legacy path, pre-rename)
+6. `~/Desktop/doc-quailty-gate` (legacy path, pre-rename)
+- `dqg_repo`: `https://github.com/ekintkara/doc-quality-gate.git`
 
 ## Check Flow
 

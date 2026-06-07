@@ -497,7 +497,7 @@ python scripts/dqg_run.py locate
 **Çıktı Formatı**
 
 ```
-C:\repos\doc-quailty-gate
+C:\repos\doc-quality-gate
 ```
 
 ---

@@ -18,6 +18,8 @@ title: Sorun Giderme
 | Skor 8.0 altinda | Dokuman kalitesi yetersiz | `rescore` ile iteratif duzeltme |
 | Lint/typecheck hatasi | Kod kalite sorunu | Pipeline 3 kez duzeltmeye calisir |
 | Agent hatasi | LLM API sorunu | Pipeline 1 kez tekrar dener |
+| DQG yanlis kod tabanini review ediyor | `--project` eksik veya yanlis | Wrapper otomatik CWD kullanir, DQG dizini engellenir |
+| DQG false positive uretiyor | Cross-reference indexing eksik | Faz 3.1 otomatik dogrulama yapar |
 
 ## Self-Healing
 
@@ -55,14 +57,15 @@ Pipeline su adimlari izler:
 
 ## DQG CLI Komutlari
 
-ileri kullanicilar icin DQG'yi dogrudan CLI'dan calistirabilirsiniz:
+Ileri kullanicilar icin DQG'yi dogrudan CLI'dan calistirabilirsiniz:
 
-```powershell
-cd C:\repos\doc-quailty-gate
-.venv\Scripts\Activate.ps1
+```bash
+cd ~/doc-quality-gate
+source .venv/bin/activate  # Linux/macOS
+# veya: .venv\Scripts\Activate.ps1  # Windows
 
-# Review baslat
-python scripts/dqg_run.py launch "path/to/doc.md" --project "C:\my-project" --cp "C:\my-context"
+# Review baslat (--project zorunlu)
+python scripts/dqg_run.py launch "path/to/doc.md" --project "/path/to/target-project" --cp "/path/to/context"
 
 # Sonuc poll et
 python scripts/dqg_run.py poll {review_id}
@@ -71,7 +74,7 @@ python scripts/dqg_run.py poll {review_id}
 python scripts/dqg_run.py rescore {review_id}
 
 # Jira'dan dokuman uret
-python scripts/dqg_run.py from-jira PDB-12345 --cp "C:\my-context"
+python scripts/dqg_run.py from-jira PROJ-123 --cp "/path/to/context"
 ```
 
 Tum CLI komutlari icin [CLI Reference](/dqg/cli-reference) dokumanuna bakin.

@@ -15,8 +15,8 @@ dev-pipeline skill'i projenizin `AGENTS.md` (veya `CLAUDE.md`) dosyasindan yapil
 ## Pipeline Config
 
 task_source: jira                # jira | azure-devops | github | manual
-dqg_repo: https://github.com/ekintkara/doc-quailty-gate.git
-dqg_path: C:\repos\doc-quailty-gate
+dqg_repo: https://github.com/ekintkara/doc-quality-gate.git
+dqg_path: C:\repos\doc-quality-gate
 # azure_devops_org: myorg
 # azure_devops_project: MyProject
 # github_repo: owner/repo
@@ -44,7 +44,7 @@ max_review_iterations: 2
 
 Config bulunamazsa su varsayilanlar kullanilir:
 
-- **Windows:** `dqg_path` = `C:\repos\doc-quailty-gate`
+- **Windows:** `dqg_path` = `C:\repos\doc-quality-gate`
 - **Linux/macOS:** `dqg_path` = `~/doc-quality-gate`
 - `review_agents` = 3
 - `max_review_iterations` = 2

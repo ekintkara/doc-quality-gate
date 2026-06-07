@@ -5,7 +5,7 @@ title: Pipeline Fazlari
 
 # Pipeline Fazlari
 
-Pipeline 11 fazdan olusur. Her faz belirli bir gorevi yerine getirir ve kullanici onayindan sonra bir sonrakine gecer.
+Pipeline 12 fazdan olusur. Her faz belirli bir gorevi yerine getirir ve kullanici onayindan sonra bir sonrakine gecer.
 
 ## Faz Ozet Tablosu
 
@@ -16,6 +16,7 @@ Pipeline 11 fazdan olusur. Her faz belirli bir gorevi yerine getirir ve kullanic
 | 1.5 | CONTEXT_CHECK | Context mevcut mu kontrol et | **Evet** (gerekirse) | [Detay](./task-intake) |
 | 2 | IMPL_DOC | Implementasyon dokumani olustur | **Evet** | [Detay](./impl-doc) |
 | 3 | REVIEW_DOC | DQG ile dokuman review | **Evet** | [Detay](./dqg-review) |
+| 3.1 | VALIDATE_XREF | DQG sonuclarini dogrula | Hayir | False positive filtreleme |
 | 4 | PLAN | TODO listesi olustur | **Evet** | [Detay](./planning) |
 | 5 | REVIEW_TODO | 3-agent TODO review + judge | **Evet** | [Detay](./planning) |
 | 6 | IMPLEMENT | Kodu yaz | Hayir | [Detay](./implementation) |
@@ -51,6 +52,9 @@ Basla
   │
   ▼
 [3] REVIEW_DOC (DQG)
+  │
+  ▼
+[3.1] VALIDATE_XREF (false positive dogrulama)
   │
   ▼
   ◀ USER ONAY

@@ -393,7 +393,7 @@ Web sunucusu loglarını incelemek için:
 
 ```bash
 # Windows
-type C:\repos\doc-quailty-gate\outputs\web_server.log
+type C:\repos\doc-quality-gate\outputs\web_server.log
 
 # Linux / macOS
 cat /path/to/doc-quality-gate/outputs/web_server.log

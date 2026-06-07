@@ -40,7 +40,7 @@ Projenizin `AGENTS.md` dosyasina config ekleyebilirsiniz. Eklemezseniz varsayila
 
 task_source: jira
 dqg_repo: https://github.com/ekintkara/doc-quality-gate.git
-dqg_path: C:\repos\doc-quailty-gate
+dqg_path: ~/doc-quality-gate
 context_path: .context/
 review_agents: 3
 max_review_iterations: 2

@@ -735,7 +735,7 @@ doc-quality-gate/
 
 ```bash
 # 1. Repoyu klonla
-git clone https://github.com/ekintkara/doc-quailty-gate.git doc-quality-gate
+git clone https://github.com/ekintkara/doc-quality-gate.git doc-quality-gate
 cd doc-quality-gate
 
 # 2. Kurulumu çalıştır

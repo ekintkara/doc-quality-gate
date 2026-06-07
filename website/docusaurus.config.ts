@@ -12,10 +12,10 @@ const config: Config = {
   },
 
   url: 'https://ekintkara.github.io',
-  baseUrl: '/doc-quailty-gate/',
+  baseUrl: '/doc-quality-gate/',
 
   organizationName: 'ekintkara',
-  projectName: 'doc-quailty-gate',
+  projectName: 'doc-quality-gate',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
@@ -34,7 +34,7 @@ const config: Config = {
           path: 'docs/skill',
           routeBasePath: 'docs',
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/ekintkara/doc-quailty-gate/tree/main/website/',
+          editUrl: 'https://github.com/ekintkara/doc-quality-gate/tree/main/website/',
         },
         blog: false,
         theme: {
@@ -52,7 +52,7 @@ const config: Config = {
         path: 'docs-dqg',
         routeBasePath: 'dqg',
         sidebarPath: './sidebars-dqg.ts',
-        editUrl: 'https://github.com/ekintkara/doc-quailty-gate/tree/main/website/',
+        editUrl: 'https://github.com/ekintkara/doc-quality-gate/tree/main/website/',
       },
     ],
   ],
@@ -83,7 +83,7 @@ const config: Config = {
           docsPluginId: 'dqg',
         },
         {
-          href: 'https://github.com/ekintkara/doc-quailty-gate',
+          href: 'https://github.com/ekintkara/doc-quality-gate',
           label: 'GitHub',
           position: 'right',
         },
@@ -131,7 +131,7 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/ekintkara/doc-quailty-gate',
+              href: 'https://github.com/ekintkara/doc-quality-gate',
             },
           ],
         },

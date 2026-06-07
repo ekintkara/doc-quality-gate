@@ -284,6 +284,20 @@ def _extract_dependencies(root: Path) -> dict:
         except Exception:
             pass
 
+    csproj_files = list(root.glob("**/*.csproj"))
+    if csproj_files:
+        items = []
+        for csproj in csproj_files[:5]:
+            try:
+                content = csproj.read_text(encoding="utf-8")
+                for match in re.finditer(r'<PackageReference\s+Include="([^"]+)"', content):
+                    items.append(match.group(1))
+            except Exception:
+                pass
+        if items:
+            deps["csproj"] = items
+            deps["total_count"] += len(items)
+
     return deps
 
 
@@ -309,6 +323,18 @@ def _extract_api_routes(root: Path, max_files: int) -> list[dict]:
             "generic",
         ),
         (re.compile(r'(?:router|app)\.(get|post|put|delete|patch)\s*\(\s*[\'"]([^\'"]+)[\'"]', re.I), "fastapi/flask"),
+        (
+            re.compile(r'\[Http(Get|Post|Put|Delete|Patch)\s*\(\s*["\']([^"\']+)', re.I),
+            "csharp/aspnet",
+        ),
+        (
+            re.compile(r'\[Route\s*\(\s*["\']([^"\']+)', re.I),
+            "csharp/aspnet-base",
+        ),
+        (
+            re.compile(r'Map(Get|Post|Put|Delete|Patch)\s*\(\s*["\']([^"\']+)', re.I),
+            "csharp/minimal-api",
+        ),
     ]
 
     seen_routes: set[str] = set()
@@ -339,12 +365,37 @@ def _extract_api_routes(root: Path, max_files: int) -> list[dict]:
                 (re.compile(r'\.(get|post|put|delete|patch|head|options)\s*\(\s*[\'"](/[^\'"]*)[\'"]', re.I), "http"),
             ]
 
+            csharp_base_route = None
+            base_match = re.search(r'\[Route\s*\(\s*["\']([^"\']+)', content)
+            if base_match:
+                csharp_base_route = base_match.group(1)
+
             for pat, source_type in all_patterns:
                 for match in pat.finditer(content):
-                    method = match.group(1).upper()
-                    path = match.group(2)
-                    if not path.startswith("/"):
+                    try:
+                        method = match.group(1).upper()
+                    except IndexError:
                         continue
+                    try:
+                        path = match.group(2)
+                    except IndexError:
+                        continue
+                    if not path.startswith("/"):
+                        if source_type.startswith("csharp") and csharp_base_route:
+                            path = csharp_base_route + "/" + path if path else csharp_base_route
+                        else:
+                            continue
+                    key = f"{method} {path}"
+                    if key not in seen_routes:
+                        seen_routes.add(key)
+                        routes.append({"method": method, "path": path, "source": rel_path})
+
+            if csharp_base_route:
+                for http_attr in re.finditer(r'\[(HttpGet|HttpPost|HttpPut|HttpDelete|HttpPatch)\]', content):
+                    method = http_attr.group(1).replace("Http", "").upper()
+                    if method == "GET":
+                        method = "GET"
+                    path = csharp_base_route
                     key = f"{method} {path}"
                     if key not in seen_routes:
                         seen_routes.add(key)
@@ -376,7 +427,7 @@ def _extract_db_models(root: Path, max_files: int) -> list[dict]:
         dirnames[:] = [d for d in dirnames if d not in IGNORED_DIRS and not d.startswith(".")]
         for f in filenames:
             ext = Path(f).suffix.lower()
-            if ext not in {".py", ".ts", ".js", ".java", ".go", ".rb", ".php", ".prisma"}:
+            if ext not in {".py", ".ts", ".js", ".java", ".go", ".rb", ".php", ".prisma", ".cs"}:
                 continue
             file_count += 1
             if file_count > max_files:
@@ -394,6 +445,14 @@ def _extract_db_models(root: Path, max_files: int) -> list[dict]:
                 name = match.group(1)
                 fields = _extract_class_fields(content[match.start() :])
                 models.append({"name": name, "fields": fields, "source": rel_path})
+
+            for match in re.finditer(r"(?:public\s+)?(?:class|record)\s+(\w+)\s*(?::\s*\w+)?", content):
+                name = match.group(1)
+                if any(x in name for x in ("Controller", "Service", "Repository", "Handler", "Middleware", "Configuration", "Mapping", "Profile", "Extension", "Attribute", "Exception", "Validator")):
+                    continue
+                fields = _extract_csharp_properties(content[match.start() :])
+                if fields:
+                    models.append({"name": name, "fields": fields, "source": rel_path})
 
             for match in re.finditer(r"model\s+(\w+)\s*\{", content):
                 name = match.group(1)
@@ -454,6 +513,22 @@ def _extract_ts_interface_fields(body: str) -> list[str]:
                 if field_name and not field_name.startswith("//") and not field_name.startswith("/*"):
                     fields.append(field_name)
     return fields[:15]
+
+
+def _extract_csharp_properties(body: str) -> list[str]:
+    fields = []
+    for line in body[:3000].split("\n"):
+        stripped = line.strip()
+        if re.match(r"(?:public\s+)?(?:class|record|interface|enum|struct)\s+\w+", stripped):
+            if fields:
+                break
+            continue
+        m = re.match(r"public\s+(?:\w+(?:<[^>]+>)?(?:\[\])?(?:\?)?)\s+(\w+)\s*\{", stripped)
+        if m:
+            prop_name = m.group(1)
+            if not prop_name.startswith(("get", "set", "Class", "Method")):
+                fields.append(prop_name)
+    return fields[:20]
 
 
 def _extract_configs(root: Path) -> list[str]:

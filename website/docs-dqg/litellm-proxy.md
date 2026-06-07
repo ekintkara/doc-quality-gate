@@ -344,7 +344,7 @@ python scripts/dqg_run.py check-proxy
 powershell -Command "Get-NetTCPConnection -LocalPort 4000"
 
 # Manuel proxy başlatma
-cd C:\repos\doc-quailty-gate
+cd C:\repos\doc-quality-gate
 .venv\Scripts\python.exe -m litellm --config config/litellm/config.yaml --port 4000
 ```
 

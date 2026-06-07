@@ -25,22 +25,21 @@ dev-pipeline, bir task'i (Jira, Azure DevOps, GitHub Issues, dosya veya serbest 
 ## Pipeline Akisi
 
 ```
-DQG_ENSURE → TASK_INTAKE → [USER] → CONTEXT_CHECK → (GENERATE_CONTEXT → [USER]) →
-IMPL_DOC → [USER] → REVIEW_DOC(DQG) → [USER] → PLAN → [USER] → REVIEW_TODO → [USER] →
-IMPLEMENT → REVIEW_IMPL → [USER] → TEST_PLAN → [USER] → TEST → [USER] → DONE
+DQG_ENSURE → TASK_INTAKE → [USER] → CONTEXT_CHECK → [USER] →
+IMPL_DOC → [USER] → REVIEW_DOC(DQG) → VALIDATE_XREF → [USER] → PLAN → [USER] →
+REVIEW_TODO → [USER] → IMPLEMENT → REVIEW_IMPL → [USER] →
+TEST_PLAN → [USER] → TEST → [USER] → DONE
 ```
 
 Her `[USER]` noktasinda AI durur ve sizin onayinizi bekler.
 
-## Golden Rules
+## Kritik Kurallar
 
-1. **AI asla kod pushlamaz** — siz soylemedikce
-2. **AI asla faz atlamaz** — sizin onayiniz olmadan
-3. **AI asla commit etmez** — siz "commit" demedikce
-4. **Her completed work oncesinde ozet sunulur**
-5. **Her faz gecisinde onay istenir**
-6. **Kullanici degisiklik yaptiysa adapte olur**
-7. **AI otonom degildir** — karar verici sizsiniz
+1. **AI asla kod pushlamaz/commit etmez** — siz soylemedikce
+2. **AI asla faz atlamaz** — her checkpoint'te onayiniz gerekli
+3. **AI kullanici degisikliklerine adapte olur** — degisiklik yaparsaniz entegre eder
+4. **DQG'ye her zaman `--project` gecirilir** — hedef proje yolu (CWD), asla DQG'nin dizini degil
+5. **DQG sonuclari dogrulanir** — cross-reference bulgulari kod tabaninda grep ile dogrulanir, false positive'ler filtrelenir
 
 ## Desteklenen Task Kaynaklari
 
