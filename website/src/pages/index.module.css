@@ -1,0 +1,110 @@
+.heroBanner {
+  padding: 5rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.heroBanner h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.heroDescription {
+  font-size: 1.2rem;
+  max-width: 700px;
+  margin: 1.5rem auto;
+  opacity: 0.9;
+  line-height: 1.7;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 3rem 1rem;
+  }
+  .heroBanner h1 {
+    font-size: 2.5rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.features {
+  padding: 4rem 0;
+}
+
+.feature {
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.featureIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.feature h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.feature p {
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+}
+
+.pipelineSection {
+  padding: 4rem 0;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 3rem;
+}
+
+.pipelineFlow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pipelineStep {
+  background: var(--ifm-color-primary);
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.pipelineStepFinal {
+  background: #10b981;
+}
+
+.pipelineArrow {
+  font-size: 1.5rem;
+  color: var(--ifm-color-emphasis-500);
+  font-weight: bold;
+}
+
+@media screen and (max-width: 768px) {
+  .pipelineFlow {
+    flex-direction: column;
+  }
+  .pipelineArrow {
+    transform: rotate(90deg);
+  }
+}
